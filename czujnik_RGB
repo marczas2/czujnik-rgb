@@ -1,0 +1,53 @@
+
+Załącznik A. Program ESP32-H2 + APDS-9960
+#include <Wire.h>
+#include <SparkFun_APDS9960.h>
+
+#define SDA_PIN 12
+#define SCL_PIN 13
+SparkFun_APDS9960 apds;
+
+#define GREEN_PIN 10
+#define BLUE_PIN  11
+#define RED_PIN   14
+
+const uint16_t PROG_BRAKU_KLOCKA = 150;
+
+void wylaczWyjscia() {
+  digitalWrite(GREEN_PIN, LOW);
+  digitalWrite(BLUE_PIN, LOW);
+  digitalWrite(RED_PIN, LOW);
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  wylaczWyjscia();
+  Wire.begin(SDA_PIN, SCL_PIN);
+  if (!apds.init()) { while (1) { wylaczWyjscia(); delay(1000); } }
+  if (!apds.enableLightSensor(false)) { while (1) { wylaczWyjscia(); delay(1000); } }
+  delay(500);
+}
+
+void loop() {
+  uint16_t red = 0, green = 0, blue = 0, ambient = 0;
+  bool ok = apds.readAmbientLight(ambient) && apds.readRedLight(red) &&
+            apds.readGreenLight(green) && apds.readBlueLight(blue);
+  if (!ok) { wylaczWyjscia(); delay(500); return; }
+  wylaczWyjscia();
+  if (ambient > PROG_BRAKU_KLOCKA) {
+    // brak klocka
+  } else if (red > 45 && green < 25) {
+    digitalWrite(RED_PIN, HIGH);
+  } else if (green > red && green > blue) {
+    digitalWrite(GREEN_PIN, HIGH);
+  } else if (blue < 55 && red < 40) {
+    digitalWrite(BLUE_PIN, HIGH);
+  }
+  delay(250);
+}
+
+
